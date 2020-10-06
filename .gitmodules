@@ -1,0 +1,9 @@
+[submodule ".\\3rdparty\\WindingNumber\\"]
+	path = .\\3rdparty\\WindingNumber\\
+	url = https://github.com/alecjacobson/WindingNumber.git
+[submodule "UniformSampleNBall"]
+	path = UniformSampleNBall
+	url = https://gist.github.com/d8facf982d958d13fd09709769029700.git
+[submodule "3rdparty/pybind11"]
+	path = 3rdparty/pybind11
+	url = https://github.com/pybind/pybind11.git
