@@ -15,7 +15,8 @@ C++/PyTorch Implementation of the Paper: "Overfit Neural Networks as a Compact S
 ```
 
 ## Dependencies
-- Eigen >= 3 (for timing comparison)
+- Eigen >= 3
+- TBB >= 4
 
 ## Building
 ```
