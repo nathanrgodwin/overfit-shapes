@@ -4,3 +4,6 @@
 [submodule "3rdparty/pybind11"]
 	path = 3rdparty/pybind11
 	url = https://github.com/pybind/pybind11.git
+[submodule "UniformSampleNBall"]
+	path = UniformSampleNBall
+	url = https://github.com/nathanrgodwin/UniformSampleNBall.git
