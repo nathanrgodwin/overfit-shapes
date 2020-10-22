@@ -40,7 +40,7 @@ main(int argc, char** argv)
     Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor> faces;
     std::tie(vertices, faces) = MeshLoader::read("bunny.stl");
     SDFSampler::PointSampler sampler(vertices, faces);
-    std::cout << sampler.sample(1e6, 20).first << std::endl;
+    std::cout << sampler.sample(10, 20).first << std::endl;
 
 
 }

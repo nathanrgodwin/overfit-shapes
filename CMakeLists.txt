@@ -18,14 +18,14 @@ set(UNIFORM_SAMPLER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/UniformSampleNBall)
 #Build point sampler
 find_package(Eigen3 REQUIRED)
 
-option(BUILD_PYTHON ON "Build Python linkage")
+option(BUILD_PYTHON "Build Python linkage" ON)
 if (BUILD_PYTHON)
     add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/pybind11")
 endif()
 
 add_subdirectory(SDFSampler)
 
-option(BUILD_EXAMPLE ON "Build sampler example")
+option(BUILD_EXAMPLE "Build sampler example" ON)
 if (BUILD_EXAMPLE)
     add_subdirectory(example)
 endif()

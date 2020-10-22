@@ -16,9 +16,9 @@ PointSampler::PointSampler(const Eigen::Ref<const Eigen::MatrixXf> vertices,
     int seed)
     : vertices_(vertices),
     faces_(faces),
-    importance_threshold_(1.0e-4),
     beta_(30),
-    tree_(vertices, faces)
+    tree_(vertices, faces),
+    radius_scaling_(1.1)
 {
     assert(vertices.cols() == 3);
     assert(vertices.rows() > 0);
@@ -65,7 +65,7 @@ PointSampler::sample(const size_t numPoints, const float sampleSetScale)
 {
     assert(sampleSetScale >= 1);
     std::pair<Eigen::MatrixXf, Eigen::VectorXf> result;
-    float radius = bounding_radius_ + importance_threshold_;
+    float radius = bounding_radius_ * radius_scaling_;
 
     auto greater = [&](const std::pair<Eigen::Vector3f, float>& pt1, const std::pair<Eigen::Vector3f, float>&pt2) {
         return importance_func_(pt1.first, pt1.second) > importance_func_(pt2.first, pt2.second);
@@ -79,12 +79,7 @@ PointSampler::sample(const size_t numPoints, const float sampleSetScale)
         {
             float importance;
             HDK_Sample::UT_Vector3T<float> point;
-            nrg::UniformSampleNBall<3>(radius, point, seed_);
-            point[0] += mean_[0];
-            point[1] += mean_[1];
-            point[2] += mean_[2];
-
-
+            nrg::UniformSampleNBall<3>(radius, mean_, seed_, point, tbb::this_task_arena::current_thread_index());
 
             float winding_num = solid_angle_.computeSolidAngle(point) / (4.0 * M_PI);
 

@@ -31,7 +31,7 @@ public:
     sample(const size_t numPoints = 1, const float sampleSetScale = 10);
 
     inline unsigned int&
-    seed() const
+    seed()
     {
         return seed_;
     }
@@ -57,6 +57,7 @@ private:
     Eigen::Vector3f mean_;
     unsigned int seed_;
     float bounding_radius_;
+    float radius_scaling_;
     const Eigen::Ref<const Eigen::MatrixXf> vertices_;
     const Eigen::Ref<const Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor>> faces_;
 };
