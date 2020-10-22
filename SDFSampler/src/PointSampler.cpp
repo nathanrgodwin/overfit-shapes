@@ -55,7 +55,7 @@ PointSampler::PointSampler(const Eigen::Ref<const Eigen::MatrixXf> vertices,
 }
 
 std::pair<Eigen::Vector3f, float>
-PointSampler::boundingVolume()
+PointSampler::boundingSphere()
 {
     return std::make_pair(mean_, bounding_radius_);
 }

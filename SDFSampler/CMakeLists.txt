@@ -3,9 +3,6 @@ add_library(SDFSampler STATIC
     src/Octree.cpp
     src/MeshLoader.cpp)
 
-MESSAGE(${UNIFORM_SAMPLER_DIR})
-message(${3rdparty_DIR})
-
 target_include_directories(SDFSampler PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
     ${EIGEN3_INCLUDE_DIR}

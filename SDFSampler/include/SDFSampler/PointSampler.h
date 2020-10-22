@@ -21,22 +21,19 @@ public:
         const Eigen::Ref<const Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor>> faces,
         int seed = -1);
 
+    /**
+    * Returns the bounding sphere parameters
+    **/
     std::pair<Eigen::Vector3f, float>
-    boundingVolume();
+    boundingSphere();
 
     std::pair<Eigen::MatrixXf, Eigen::VectorXf>
     sample(const size_t numPoints = 1, const float sampleSetScale = 10);
 
-    inline const unsigned int
+    inline unsigned int&
     seed() const
     {
         return seed_;
-    }
-
-    inline void
-    setSeed(unsigned int seed)
-    {
-        seed_ = seed;
     }
 
     inline std::function<float(const Eigen::Vector3f&, float)>&
@@ -45,20 +42,13 @@ public:
         return importance_func_;
     }
 
-    inline void
-    setImportanceThreshold(float threshold)
-    {
-        importance_threshold_ = threshold;
-    }
-
     inline float&
-    setBeta()
+    beta()
     {
         return beta_;
     }
 
     float beta_;
-    float importance_threshold_;
 
 private:
     Octree tree_;
