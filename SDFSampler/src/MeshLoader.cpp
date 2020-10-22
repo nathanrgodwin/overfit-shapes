@@ -63,18 +63,40 @@ MeshLoader::read(const std::string& file)
 bool
 MeshLoader::readOBJ(std::istream& input, std::vector<Vertex>& points, std::vector<Face>& faces)
 {
-    return false;
-}
-
-bool
-get_vertex(std::istream& is, MeshLoader::Vertex& p)
-{
-    is >> p.x;
-    if (!is.good()) return false;
-    is >> p.y;
-    if (!is.good()) return false;
-    is >> p.z;
-    return is.good();
+    Vertex v;
+    std::string line;
+    while (getline(input, line))
+    {
+        if (line[0] == 'v' && line[1] == ' ')
+        {
+            std::istringstream iss(line.substr(1));
+            if (!(iss >> v)) return false;
+            points.push_back(v);
+        }
+        else if (line[0] == 'f')
+        {
+            Face f;
+            std::istringstream iss(line.substr(1));
+            if (!(iss >> f)) return false;
+            for (int i = 0; i < 3; ++i)
+            {
+                if (f.data[i] < 1)
+                {
+                    f.data[i] += points.size();
+                }
+                else
+                {
+                    --f.data[i];
+                }
+            }
+            faces.push_back(f);
+        }
+        else
+        {
+            continue;
+        }
+    }
+    return true;
 }
 
 bool
@@ -104,7 +126,7 @@ MeshLoader::readSTLFace(std::istream& input,
         {
             if (count >= 3) return false;
 
-            if (!get_vertex(input, p))
+            if (!(input >> p).good())
             {
                 return false;
             }

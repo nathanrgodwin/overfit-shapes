@@ -16,9 +16,9 @@ PointSampler::PointSampler(const Eigen::Ref<const Eigen::MatrixXf> vertices,
     int seed)
     : vertices_(vertices),
     faces_(faces),
-    beta_(30),
+    beta_(30.0f),
     tree_(vertices, faces),
-    radius_scaling_(1.1)
+    radius_scaling_(1.1f)
 {
     assert(vertices.cols() == 3);
     assert(vertices.rows() > 0);
@@ -43,7 +43,7 @@ PointSampler::PointSampler(const Eigen::Ref<const Eigen::MatrixXf> vertices,
     bounding_radius_ = (vertices.rowwise() - mean_.transpose()).rowwise().norm().maxCoeff();
 
     std::vector<HDK_Sample::UT_Vector3T<float> > U(vertices.rows());
-    for (size_t i = 0; i < vertices.rows(); i++)
+    for (int i = 0; i < vertices.rows(); i++)
     {
         for (size_t j = 0; j < 3; j++)
         {
@@ -73,15 +73,14 @@ PointSampler::sample(const size_t numPoints, const float sampleSetScale)
 
     FixedMinPriorityQueue<std::pair<Eigen::Vector3f, float>, decltype(greater)> queue(numPoints, greater);
 
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, numPoints*(double)sampleSetScale), [&](tbb::blocked_range<size_t> r)
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, (size_t)(numPoints*(double)sampleSetScale)), [&](tbb::blocked_range<size_t> r)
     {
         for (size_t i = r.begin(); i < r.end(); ++i)
         {
-            float importance;
             HDK_Sample::UT_Vector3T<float> point;
             nrg::UniformSampleNBall<3>(radius, mean_, seed_, point, tbb::this_task_arena::current_thread_index());
 
-            float winding_num = solid_angle_.computeSolidAngle(point) / (4.0 * M_PI);
+            float winding_num = solid_angle_.computeSolidAngle(point) / (4.0f * (float)M_PI);
 
             Eigen::Vector3f pt = Eigen::Vector3f(point[0], point[1], point[2]);
 

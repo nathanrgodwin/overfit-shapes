@@ -1,5 +1,6 @@
 #pragma once
 
+#include <istream>
 #include <map>
 #include <vector>
 
@@ -33,11 +34,15 @@ private:
 		{
 			return std::tie(other.x, other.y, other.z) < std::tie(x, y, z);
 		}
+
 	};
+
+	template <typename T>
+	friend std::istream& operator>> (std::istream& is, Generic3d<T>&);
 
 public:
 
-	typedef Generic3d<size_t> Face;
+	typedef Generic3d<int> Face;
 	typedef Generic3d<float> Vertex;
 
 protected:
@@ -58,3 +63,13 @@ protected:
 	readSTLFace(std::istream& input, std::vector<Vertex>& points, std::vector<Face>& facets,
 		int& index, std::map<Vertex, int>& index_map);
 };
+
+
+template <typename T> inline
+std::istream& operator>>(std::istream& is, MeshLoader::Generic3d<T>& pt)
+{
+	is >> pt.x;
+	is >> pt.y;
+	is >> pt.z;
+	return is;
+}

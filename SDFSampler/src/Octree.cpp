@@ -15,7 +15,7 @@ Octree::Octree(const Eigen::Ref<const Eigen::MatrixXf>& vertices,
     : vertices_(vertices), faces_(faces)
 {
     vert_face_assoc = std::unique_ptr<std::unordered_map<size_t, std::set<size_t>>>(new std::unordered_map<size_t, std::set<size_t>>());
-    for (size_t i = 0; i < faces.rows(); ++i)
+    for (int i = 0; i < faces.rows(); ++i)
     {
         (*vert_face_assoc)[faces.row(i)[0]].insert(i);
         (*vert_face_assoc)[faces.row(i)[1]].insert(i);
