@@ -17,8 +17,7 @@ PointSampler::PointSampler(const Eigen::Ref<const Eigen::MatrixXf> vertices,
     : vertices_(vertices),
     faces_(faces),
     beta_(30.0f),
-    tree_(vertices, faces),
-    radius_scaling_(1.1f)
+    tree_(vertices, faces)
 {
     assert(vertices.cols() == 3);
     assert(vertices.rows() > 0);
@@ -39,8 +38,7 @@ PointSampler::PointSampler(const Eigen::Ref<const Eigen::MatrixXf> vertices,
         seed_ = seed;
     }
 
-    mean_ = vertices.colwise().mean();
-    bounding_radius_ = (vertices.rowwise() - mean_.transpose()).rowwise().norm().maxCoeff();
+
 
     std::vector<HDK_Sample::UT_Vector3T<float> > U(vertices.rows());
     for (int i = 0; i < vertices.rows(); i++)
@@ -54,31 +52,24 @@ PointSampler::PointSampler(const Eigen::Ref<const Eigen::MatrixXf> vertices,
     solid_angle_.init(faces.rows(), faces.data(), vertices.rows(), &U[0]);
 }
 
-std::pair<Eigen::Vector3f, float>
-PointSampler::boundingSphere()
-{
-    return std::make_pair(mean_, bounding_radius_);
-}
-
 std::pair<Eigen::MatrixXf, Eigen::VectorXf>
 PointSampler::sample(const size_t numPoints, const float sampleSetScale)
 {
     assert(sampleSetScale >= 1);
     std::pair<Eigen::MatrixXf, Eigen::VectorXf> result;
-    float radius = bounding_radius_ * radius_scaling_;
 
     auto greater = [&](const std::pair<Eigen::Vector3f, float>& pt1, const std::pair<Eigen::Vector3f, float>&pt2) {
         return importance_func_(pt1.first, pt1.second) > importance_func_(pt2.first, pt2.second);
     };
 
     FixedMinPriorityQueue<std::pair<Eigen::Vector3f, float>, decltype(greater)> queue(numPoints, greater);
-
+    float zero[3]{ 0,0,0 };
     tbb::parallel_for(tbb::blocked_range<size_t>(0, (size_t)(numPoints*(double)sampleSetScale)), [&](tbb::blocked_range<size_t> r)
     {
         for (size_t i = r.begin(); i < r.end(); ++i)
         {
             HDK_Sample::UT_Vector3T<float> point;
-            nrg::UniformSampleNBall<3>(radius, mean_, seed_, point, tbb::this_task_arena::current_thread_index());
+            nrg::UniformSampleNBall<3>(1.0f, zero, seed_, point, tbb::this_task_arena::current_thread_index());
 
             float winding_num = solid_angle_.computeSolidAngle(point) / (4.0f * (float)M_PI);
 

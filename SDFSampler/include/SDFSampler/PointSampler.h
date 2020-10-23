@@ -21,12 +21,6 @@ public:
         const Eigen::Ref<const Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor>> faces,
         int seed = -1);
 
-    /**
-    * Returns the bounding sphere parameters
-    **/
-    std::pair<Eigen::Vector3f, float>
-    boundingSphere();
-
     std::pair<Eigen::MatrixXf, Eigen::VectorXf>
     sample(const size_t numPoints = 1, const float sampleSetScale = 10);
 
@@ -49,15 +43,12 @@ public:
     }
 
     float beta_;
+    unsigned int seed_;
 
 private:
     Octree tree_;
     HDK_Sample::UT_SolidAngle<float, float> solid_angle_;
     std::function<float(const Eigen::Vector3f&, float)> importance_func_;
-    Eigen::Vector3f mean_;
-    unsigned int seed_;
-    float bounding_radius_;
-    float radius_scaling_;
     const Eigen::Ref<const Eigen::MatrixXf> vertices_;
     const Eigen::Ref<const Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor>> faces_;
 };

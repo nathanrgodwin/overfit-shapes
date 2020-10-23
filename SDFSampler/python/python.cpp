@@ -4,6 +4,7 @@
 #include "Octree/Octree.h"
 #include "IO/MeshLoader.h"
 #include "SDFSampler/PointSampler.h"
+#include "NormalizeMesh.h"
 
 using namespace SDFSampler;
 namespace py = pybind11;
@@ -23,8 +24,8 @@ PYBIND11_MODULE(SDFSampler, m) {
             const Eigen::Ref<const Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor>>,
             int>(), py::arg("vertices"), py::arg("faces"), py::arg("seed") = -1)
         .def("sample", &PointSampler::sample, py::arg("numPoints") = 1, py::arg("sampleSetScale") = 10)
-        .def("setImportanceThreshold", &PointSampler::setImportanceThreshold)
-        .def("boundingSphere", &PointSampler::boundingVolume)
-        .def_readwrite("importanceThreshold", &PointSampler::importance_threshold_)
-        .def_readwrite("beta", &PointSampler::beta_);
+        .def_readwrite("beta", &PointSampler::beta_)
+        .def_readwrite("seed", &PointSampler::seed_);
+
+    m.def("normalizeMeshToUnitSphere", &normalizeMeshToUnitSphere, "Normalizes a mesh to the unit sphere at origin");
 }
