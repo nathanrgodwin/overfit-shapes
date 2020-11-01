@@ -11,17 +11,17 @@
 
 using namespace SDFSampler;
 
-PointSampler::PointSampler(const Eigen::Ref<const Eigen::MatrixXf> vertices,
-    const Eigen::Ref<const Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor>> faces,
+PointSampler::PointSampler(const Eigen::Ref<const Eigen::MatrixXf>& vertices,
+    const Eigen::Ref<const Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor>>& faces,
     int seed)
-    : vertices_(vertices),
-    faces_(faces),
-    beta_(30.0f),
-    tree_(vertices, faces)
+    : mesh_(std::make_shared<MeshReference>(vertices, faces)),
+    beta_(30.0f)
 {
     assert(vertices.cols() == 3);
     assert(vertices.rows() > 0);
     assert(faces.rows() > 0);
+
+    tree_ = std::unique_ptr<AABB_tree<float>>(new AABB_tree<float>(mesh_));
 
     importance_func_ = [&](const Eigen::Vector3f& point, float dist) -> float
     {
@@ -75,7 +75,7 @@ PointSampler::sample(const size_t numPoints, const float sampleSetScale)
 
             Eigen::Vector3f pt = Eigen::Vector3f(point[0], point[1], point[2]);
 
-            float dist = tree_.closestFace(pt).second;
+            float dist = tree_->closestPoint(pt).second;
             if (winding_num > 0)
             {
                 dist *= -1;

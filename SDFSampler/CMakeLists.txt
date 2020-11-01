@@ -4,22 +4,31 @@ else()
 set(SDFSampler_BUILD_MODE STATIC)
 endif()
 
+find_package(CGAL REQUIRED)
+
 add_library(Sampler ${SDFSampler_BUILD_MODE}
     src/PointSampler.cpp
-    src/Octree.cpp
     src/MeshLoader.cpp)
 
 target_include_directories(Sampler PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
     ${EIGEN3_INCLUDE_DIR}
+    ${CGAL_INCLUDE_DIR}
     ${UNIFORM_SAMPLER_DIR}
     ${3rdparty_DIR})
 
 target_link_libraries(Sampler PUBLIC
-    FastWindingNumbers)
+    FastWindingNumbers
+    ${CGAL_LIBRARIES})
 
 if (NOT WIN32)
     target_link_libraries(Sampler PUBLIC stdc++fs)
+endif()
+
+if (BUILD_EXAMPLE)
+    add_executable(SamplerExample example/main.cpp)
+
+    target_link_libraries(SamplerExample PUBLIC Sampler)
 endif()
 
 if (BUILD_PYTHON)

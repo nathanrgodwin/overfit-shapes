@@ -1,7 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/eigen.h>
 
-#include "Octree/Octree.h"
+#include "AABB_tree/AABB_tree.h"
 #include "IO/MeshLoader.h"
 #include "SDFSampler/PointSampler.h"
 #include "NormalizeMesh.h"
@@ -9,11 +9,11 @@
 using namespace SDFSampler;
 namespace py = pybind11;
 PYBIND11_MODULE(SDFSampler, m) {
-    py::class_<Octree>(m, "Octree")
+    py::class_<AABB_tree<float>>(m, "AABB_tree")
         .def(py::init<const Eigen::Ref<const Eigen::MatrixXf>&,
             const Eigen::Ref<const Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor>>&>())
-        .def("closestFace", &Octree::closestFace)
-        .def("closestPoint", &Octree::closestPoint);
+        .def("closestFace", &AABB_tree<float>::closestFace)
+        .def("closestPoint", &AABB_tree<float>::closestPoint);
 
     py::class_<MeshLoader>(m, "MeshLoader")
         .def(py::init<>())

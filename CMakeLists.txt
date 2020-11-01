@@ -23,9 +23,6 @@ if (BUILD_PYTHON)
     add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/pybind11")
 endif()
 
-add_subdirectory(SDFSampler)
-
 option(BUILD_EXAMPLE "Build sampler example" ON)
-if (BUILD_EXAMPLE)
-    add_subdirectory(example)
-endif()
+
+add_subdirectory(SDFSampler)

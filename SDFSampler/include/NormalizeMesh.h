@@ -3,17 +3,17 @@
 #include <Eigen/Core>
 #include "ExportSemantics.h"
 
-static void
+static std::pair<Eigen::Vector3f, float>
 normalizeMeshToUnitSphere(Eigen::Ref<Eigen::MatrixXf> vertices,
     Eigen::Ref<Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor>> faces)
 {
+    assert(vertices.rows() > 0);
+    assert(faces.rows() > 0);
     Eigen::Matrix<float, 1, 3> mean = vertices.colwise().mean();
     vertices.rowwise() -= mean;
 
-    Eigen::MatrixXf::Index idx;
-    float scale_factor = vertices.rowwise().norm().maxCoeff(&idx);
+    float scale_factor = vertices.rowwise().norm().maxCoeff();
 
-    Eigen::Matrix<float, 1, 3> scale = vertices.row(idx);
-
-    vertices.array().rowwise() /= (scale_factor * scale).array();
+    vertices /= scale_factor;
+    return std::make_pair(mean, scale_factor);
 }
