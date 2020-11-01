@@ -17,6 +17,8 @@ C++/PyTorch Implementation of the Paper: "Overfit Neural Networks as a Compact S
 ## Dependencies
 - Eigen >= 3
 - TBB >= 4
+- CGAL >= 4
+- Boost >= 1.48
 
 ## Building
 ```
