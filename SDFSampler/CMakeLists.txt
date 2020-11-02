@@ -29,6 +29,14 @@ if (BUILD_EXAMPLE)
     add_executable(SamplerExample example/main.cpp)
 
     target_link_libraries(SamplerExample PUBLIC Sampler)
+
+    install(TARGETS 
+        SamplerExample
+        LIBRARY DESTINATION ./
+        RUNTIME DESTINATION ./)
+
+    install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/data/cube.obj"
+            DESTINATION "${CMAKE_INSTALL_PREFIX}")
 endif()
 
 if (BUILD_PYTHON)
@@ -39,5 +47,28 @@ if (BUILD_PYTHON)
     set_target_properties(pySDFSampler PROPERTIES OUTPUT_NAME SDFSampler)
 
     add_dependencies(pySDFSampler Sampler)
+    
+    install(TARGETS 
+        pySDFSampler
+        LIBRARY DESTINATION ./
+        RUNTIME DESTINATION ./)
+
+    install(FILES 
+            "${CMAKE_SOURCE_DIR}/OverfitShapes/NeuralImplicit.py"
+            "${CMAKE_SOURCE_DIR}/OverfitShapes/Overfit_Neural_Networks_as_a_Compact_Shape_Representation.ipynb"
+        DESTINATION "${CMAKE_INSTALL_PREFIX}")
+
+    if (BUILD_EXAMPLE)
+        install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/python/example/example.py"
+                DESTINATION "${CMAKE_INSTALL_PREFIX}")
+    endif()
 endif()
 
+install(TARGETS 
+    Sampler
+    LIBRARY DESTINATION ./
+    RUNTIME DESTINATION ./)
+
+get_target_property(TBB_LOCATION TBB::tbb IMPORTED_LOCATION_RELEASE)
+install(FILES "${TBB_LOCATION}"
+        DESTINATION "${CMAKE_INSTALL_PREFIX}")

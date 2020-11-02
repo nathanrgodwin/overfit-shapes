@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION 3.1)
+
+set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/workspace" CACHE PATH "Install location to move all the files")
+
 project(SDFSampler)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 
 #Build fast winding numbers library
 find_package(TBB REQUIRED)

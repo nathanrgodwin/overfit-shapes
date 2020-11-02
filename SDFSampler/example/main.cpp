@@ -9,7 +9,7 @@ main(int argc, char** argv)
 {
     Eigen::MatrixXf vertices;
     Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor> faces;
-    std::tie(vertices, faces) = MeshLoader::read("model_000003.obj");//"bunny.stl");
+    std::tie(vertices, faces) = MeshLoader::read("cube.obj");
     std::cout << vertices.rows() << ", " << faces.rows() << std::endl;
     normalizeMeshToUnitSphere(vertices, faces);
     SDFSampler::PointSampler sampler(vertices, faces);
