@@ -55,6 +55,7 @@ if (BUILD_PYTHON)
 
     install(FILES 
             "${CMAKE_SOURCE_DIR}/OverfitShapes/NeuralImplicit.py"
+            "${CMAKE_SOURCE_DIR}/OverfitShapes/FileUtilities.py"
             "${CMAKE_SOURCE_DIR}/OverfitShapes/Overfit_Neural_Networks_as_a_Compact_Shape_Representation.ipynb"
         DESTINATION "${CMAKE_INSTALL_PREFIX}")
 

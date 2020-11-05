@@ -1,4 +1,5 @@
 import os
+import logging
 import time
 from torch import nn
 import torch
@@ -14,12 +15,14 @@ class NeuralImplicit:
     self.lr = 1e-4
     self.batch_size = 64
     self.log_iterations = 1000
+    self.trained = False
 
   # Supported mesh file formats are .obj and .stl
   # Sampler selects oversample_ratio * num_sample points around the mesh, keeping only num_sample most
   # important points as determined by the importance metric
   def encode(self, mesh_file, num_samples=1000000, oversample_ratio = 30, early_stop=None, verbose=True):
-    dataset = self.MeshDataset(mesh_file, num_samples, oversample_ratio)
+    mesh_basename = os.path.basename(mesh_file)
+    dataset = self.MeshDataset(mesh_file, num_samples, oversample_ratio, verbose)
     dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -49,20 +52,37 @@ class NeuralImplicit:
         epoch_loss += loss.item()
         if (verbose and ((batch_idx+1) % self.log_iterations == 0)):
           msg = '{}\tEpoch: {}:\t[{}/{}]\tepoch_loss: {:.6f}\tloss: {:.6f}'.format(
-              time.ctime(),
+              mesh_basename,
               e + 1,
               count,
               len(dataset),
               epoch_loss / (batch_idx + 1),
               loss)
-          print(msg)
+          logging.info(msg)
 
       if (early_stop and epoch_loss < early_stop):
         break
-    
+  
     model_file = os.path.dirname(mesh_file) + "/" + os.path.splitext(os.path.basename(mesh_file))[0] + ".pth"
     torch.save(self.model.state_dict(), model_file)
-    
+    self.trained = True
+
+  def load(self, state_file):
+    print(self.model.load_state_dict(torch.load(state_file)))
+    self.trained = True
+
+  def weights(self):
+    weights = np.empty((0,))
+    for weight_mat in list(self.model.state_dict().values())[::2]:
+      weights = np.concatenate((weights, np.squeeze(weight_mat.numpy().reshape(-1, 1))))
+    return weights
+
+  def biases(self):
+    biases = np.empty((0,))
+    for bias_mat in list(self.model.state_dict().values())[1::2]:
+      biases = np.concatenate((biases, bias_mat.numpy()))
+    return biases
+
   # The actual network here is just a simple MLP
   class OverfitSDF(nn.Module):
     def __init__(self, N, H):
@@ -75,7 +95,7 @@ class NeuralImplicit:
       # dataset?
       net = [nn.Linear(3, H), nn.LeakyReLU(0.1)]
       
-      for i in range(0,N):
+      for _ in range(N-1):
         net += [nn.Linear(H, H), nn.LeakyReLU(0.1)]
 
       net += [nn.Linear(H,1), nn.LeakyReLU(0.1)]
@@ -89,20 +109,21 @@ class NeuralImplicit:
   # Dataset generates data from the mesh file using the SDFSampler library on CPU
   # Moving data generation to GPU should speed up this process significantly
   class MeshDataset(Dataset):
-    def __init__(self, mesh_file, num_samples, oversample_ratio):
-      print("Loading " + mesh_file, flush=True)
-      time.sleep(0.1)
+    def __init__(self, mesh_file, num_samples, oversample_ratio, verbose=True):
+      if (verbose):
+        logging.info("Loading " + mesh_file)
 
       vertices, faces = MeshLoader.read(mesh_file)
       normalizeMeshToUnitSphere(vertices, faces)
 
-      print("Loaded mesh", flush=True)
-      time.sleep(0.1)
+      if (verbose):
+        logging.info("Loaded " + mesh_file)
 
       sampler = PointSampler(vertices, faces)
       self.pts = sampler.sample(num_samples, oversample_ratio)
-      print("Sampled " + str(len(self)) + " points", flush=True)
-      time.sleep(0.1)
+        
+      if (verbose):
+        logging.info("Sampled " + str(len(self)) + " points: " + mesh_file)
 
     def __getitem__(self, index):
       return torch.from_numpy(self.pts[0][index,:]), torch.tensor([self.pts[1][index]])
