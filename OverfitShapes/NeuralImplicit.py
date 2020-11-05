@@ -68,15 +68,21 @@ class NeuralImplicit:
     self.trained = True
 
   def load(self, state_file):
-    print(self.model.load_state_dict(torch.load(state_file)))
-    self.trained = True
+    try:
+      self.model.load_state_dict(torch.load(state_file))
+      self.trained = True
+      return True
+    except Exception as e:
+      return False
 
+  # Returns weights in row major form
   def weights(self):
     weights = np.empty((0,))
     for weight_mat in list(self.model.state_dict().values())[::2]:
       weights = np.concatenate((weights, np.squeeze(weight_mat.numpy().reshape(-1, 1))))
     return weights
 
+  # Returns biases in row major form
   def biases(self):
     biases = np.empty((0,))
     for bias_mat in list(self.model.state_dict().values())[1::2]:
