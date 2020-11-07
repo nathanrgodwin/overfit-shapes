@@ -1,3 +1,5 @@
+project(SDFSampler LANGUAGES CXX)
+
 if (WIN32)
 set(SDFSampler_BUILD_MODE SHARED)
 else()
@@ -15,7 +17,8 @@ target_include_directories(Sampler PUBLIC
     ${EIGEN3_INCLUDE_DIR}
     ${CGAL_INCLUDE_DIR}
     ${UNIFORM_SAMPLER_DIR}
-    ${3rdparty_DIR})
+    ${3rdparty_DIR}
+    ${UTILITY_DIR})
 
 target_link_libraries(Sampler PUBLIC
     FastWindingNumbers
@@ -25,7 +28,7 @@ if (NOT WIN32)
     target_link_libraries(Sampler PUBLIC stdc++fs)
 endif()
 
-if (BUILD_EXAMPLE)
+if (BUILD_EXAMPLES)
     add_executable(SamplerExample example/main.cpp)
 
     target_link_libraries(SamplerExample PUBLIC Sampler)
@@ -59,7 +62,7 @@ if (BUILD_PYTHON)
             "${CMAKE_SOURCE_DIR}/OverfitShapes/Overfit_Neural_Networks_as_a_Compact_Shape_Representation.ipynb"
         DESTINATION "${CMAKE_INSTALL_PREFIX}")
 
-    if (BUILD_EXAMPLE)
+    if (BUILD_EXAMPLES)
         install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/python/example/example.py"
                 DESTINATION "${CMAKE_INSTALL_PREFIX}")
     endif()

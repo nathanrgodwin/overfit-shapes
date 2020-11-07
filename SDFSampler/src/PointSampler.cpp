@@ -76,7 +76,7 @@ PointSampler::sample(const size_t numPoints, const float sampleSetScale)
             Eigen::Vector3f pt = Eigen::Vector3f(point[0], point[1], point[2]);
 
             float dist = tree_->closestPoint(pt).second;
-            if (winding_num > 0)
+            if (winding_num > 1.2e-3) //Experimentally determined for cube.obj, unknown for other mesh
             {
                 dist *= -1;
             }

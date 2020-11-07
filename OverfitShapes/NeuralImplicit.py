@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 import time
 from torch import nn
@@ -20,7 +21,11 @@ class NeuralImplicit:
   # Supported mesh file formats are .obj and .stl
   # Sampler selects oversample_ratio * num_sample points around the mesh, keeping only num_sample most
   # important points as determined by the importance metric
-  def encode(self, mesh_file, num_samples=1000000, oversample_ratio = 30, early_stop=None, verbose=True):
+  def encode(self, mesh_file, num_samples=1000000, oversample_ratio = 10, early_stop=None, verbose=True):
+    if (verbose and not logging.getLogger().hasHandlers()):
+      logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+      logging.getLogger().setLevel(logging.INFO)
+
     mesh_basename = os.path.basename(mesh_file)
     dataset = self.MeshDataset(mesh_file, num_samples, oversample_ratio, verbose)
     dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=True)
@@ -63,7 +68,7 @@ class NeuralImplicit:
       if (early_stop and epoch_loss < early_stop):
         break
   
-    model_file = os.path.dirname(mesh_file) + "/" + os.path.splitext(os.path.basename(mesh_file))[0] + ".pth"
+    model_file = os.path.dirname(os.path.abspath(mesh_file)) + "/" + os.path.splitext(os.path.basename(mesh_file))[0] + ".pth"
     torch.save(self.model.state_dict(), model_file)
     self.trained = True
 
@@ -73,6 +78,7 @@ class NeuralImplicit:
       self.trained = True
       return True
     except Exception as e:
+      print("Failed to load " + state_file)
       return False
 
   # Returns weights in row major form
@@ -104,7 +110,7 @@ class NeuralImplicit:
       for _ in range(N-1):
         net += [nn.Linear(H, H), nn.LeakyReLU(0.1)]
 
-      net += [nn.Linear(H,1), nn.LeakyReLU(0.1)]
+      net += [nn.Linear(H,1)]
       self.model = nn.Sequential(*net)
 
     def forward(self, x):
@@ -136,3 +142,7 @@ class NeuralImplicit:
 
     def __len__(self):
       return self.pts[0].shape[0]
+
+if __name__ == "__main__":
+  cube = NeuralImplicit()
+  cube.encode("cube.obj")
