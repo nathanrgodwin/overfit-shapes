@@ -7,7 +7,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 option(BUILD_RENDERER "Build renderer" OFF)
 if (BUILD_RENDERER)
     set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
-    set(CMAKE_CUDA_ARCHITECTURES 30 35 50 52 53 60 61 62 70 72 75 CACHE STRING "CUDA architectures" FORCE)
+    set(CMAKE_CUDA_ARCHITECTURES 35 CACHE STRING "CUDA architectures" FORCE)
 endif()
 
 
@@ -38,5 +38,5 @@ option(BUILD_EXAMPLES "Build examples" ON)
 add_subdirectory(SDFSampler)
 
 if (BUILD_RENDERER)
-    add_subdirectory(RayMarcher)
+    add_subdirectory(Renderer)
 endif()

@@ -39,7 +39,8 @@ class NeuralImplicit:
 
     for e in range(self.epochs):
       epoch_loss = 0
-      self.model.train()
+      epoch_validation_loss = 0
+      self.model.train(True)
       count = 0
 
       for batch_idx, (x_train, y_train) in enumerate(dataloader):
@@ -56,13 +57,12 @@ class NeuralImplicit:
         
         epoch_loss += loss.item()
         if (verbose and ((batch_idx+1) % self.log_iterations == 0)):
-          msg = '{}\tEpoch: {}:\t[{}/{}]\tepoch_loss: {:.6f}\tloss: {:.6f}'.format(
+          msg = '{}\tEpoch: {}:\t[{}/{}]\tepoch_loss: {:.6f}'.format(
               mesh_basename,
               e + 1,
               count,
               len(dataset),
-              epoch_loss / (batch_idx + 1),
-              loss)
+              epoch_loss / (batch_idx + 1))
           logging.info(msg)
 
       if (early_stop and epoch_loss < early_stop):
@@ -132,7 +132,15 @@ class NeuralImplicit:
         logging.info("Loaded " + mesh_file)
 
       sampler = PointSampler(vertices, faces)
-      self.pts = sampler.sample(num_samples, oversample_ratio)
+      boundary_points = sampler.sample(int(0.99*num_samples), oversample_ratio)
+
+      # Testing indicated very poor SDF accuracy outside the mesh boundary which complicated
+      # raymarching operations.
+      # Adding samples through the unit sphere improves accuracy farther from the boundary,
+      # but still within the unit sphere
+      general_points = sampler.sample(int(0.01*num_samples), 1)
+      self.pts = (np.concatenate((boundary_points[0], general_points[0])),
+                  np.concatenate((boundary_points[1], general_points[1])))
         
       if (verbose):
         logging.info("Sampled " + str(len(self)) + " points: " + mesh_file)
@@ -142,7 +150,3 @@ class NeuralImplicit:
 
     def __len__(self):
       return self.pts[0].shape[0]
-
-if __name__ == "__main__":
-  cube = NeuralImplicit()
-  cube.encode("cube.obj")
