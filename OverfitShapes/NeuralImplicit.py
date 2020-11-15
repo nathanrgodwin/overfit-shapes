@@ -7,16 +7,20 @@ import torch
 import torch.optim as optim
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
-from SDFSampler import PointSampler, MeshLoader, normalizeMeshToUnitSphere
+from OverfitShapes import PointSampler, MeshLoader, normalizeMeshToUnitSphere
 
 class NeuralImplicit:
-  def __init__(self, N = 8, H = 32):
-    self.model = self.OverfitSDF(N, H)
+  def __init__(self, H = 8, N = 32):
+    self.N = N
+    self.H = H
+    self.model = self.OverfitSDF(H, N)
     self.epochs = 100
     self.lr = 1e-4
     self.batch_size = 64
     self.log_iterations = 1000
+    self.boundary_ratio = 0.95
     self.trained = False
+    self.adaptive_lr = False
 
   # Supported mesh file formats are .obj and .stl
   # Sampler selects oversample_ratio * num_sample points around the mesh, keeping only num_sample most
@@ -27,7 +31,7 @@ class NeuralImplicit:
       logging.getLogger().setLevel(logging.INFO)
 
     mesh_basename = os.path.basename(mesh_file)
-    dataset = self.MeshDataset(mesh_file, num_samples, oversample_ratio, verbose)
+    dataset = self.MeshDataset(mesh_file, num_samples, oversample_ratio, self.boundary_ratio, verbose)
     dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -36,10 +40,14 @@ class NeuralImplicit:
 
     loss_func = nn.L1Loss(reduction='mean')
     optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
+    scheduler = None
+    if (self.adaptive_lr):
+      scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', 
+                    patience=min(self.epochs/20, 10), verbose=verbose)
+
 
     for e in range(self.epochs):
       epoch_loss = 0
-      epoch_validation_loss = 0
       self.model.train(True)
       count = 0
 
@@ -65,6 +73,9 @@ class NeuralImplicit:
               epoch_loss / (batch_idx + 1))
           logging.info(msg)
 
+      if (scheduler is not None):
+        scheduler.step(epoch_loss)
+
       if (early_stop and epoch_loss < early_stop):
         break
   
@@ -83,6 +94,7 @@ class NeuralImplicit:
 
   # Returns weights in row major form
   def weights(self):
+    self.model.to(torch.device("cpu"))
     weights = np.empty((0,))
     for weight_mat in list(self.model.state_dict().values())[::2]:
       weights = np.concatenate((weights, np.squeeze(weight_mat.numpy().reshape(-1, 1))))
@@ -90,14 +102,18 @@ class NeuralImplicit:
 
   # Returns biases in row major form
   def biases(self):
+    self.model.to(torch.device("cpu"))
     biases = np.empty((0,))
     for bias_mat in list(self.model.state_dict().values())[1::2]:
       biases = np.concatenate((biases, bias_mat.numpy()))
     return biases
 
+  def renderable(self):
+    return (self.H, self.N, self.weights(), self.biases())
+
   # The actual network here is just a simple MLP
   class OverfitSDF(nn.Module):
-    def __init__(self, N, H):
+    def __init__(self, H, N):
       super().__init__()
       assert(N > 0)
       assert(H > 0)
@@ -105,12 +121,12 @@ class NeuralImplicit:
       # Original paper uses ReLU but I found this lead to dying ReLU issues
       # with negative coordinates. Perhaps was not an issue with original paper's
       # dataset?
-      net = [nn.Linear(3, H), nn.LeakyReLU(0.1)]
+      net = [nn.Linear(3, N), nn.LeakyReLU(0.1)]
       
-      for _ in range(N-1):
-        net += [nn.Linear(H, H), nn.LeakyReLU(0.1)]
+      for _ in range(H-1):
+        net += [nn.Linear(N, N), nn.LeakyReLU(0.1)]
 
-      net += [nn.Linear(H,1)]
+      net += [nn.Linear(N,1)]
       self.model = nn.Sequential(*net)
 
     def forward(self, x):
@@ -121,7 +137,7 @@ class NeuralImplicit:
   # Dataset generates data from the mesh file using the SDFSampler library on CPU
   # Moving data generation to GPU should speed up this process significantly
   class MeshDataset(Dataset):
-    def __init__(self, mesh_file, num_samples, oversample_ratio, verbose=True):
+    def __init__(self, mesh_file, num_samples, oversample_ratio, boundary_ratio = 0.99, verbose=True):
       if (verbose):
         logging.info("Loading " + mesh_file)
 
@@ -132,13 +148,13 @@ class NeuralImplicit:
         logging.info("Loaded " + mesh_file)
 
       sampler = PointSampler(vertices, faces)
-      boundary_points = sampler.sample(int(0.99*num_samples), oversample_ratio)
+      boundary_points = sampler.sample(int(boundary_ratio*num_samples), oversample_ratio)
 
       # Testing indicated very poor SDF accuracy outside the mesh boundary which complicated
       # raymarching operations.
       # Adding samples through the unit sphere improves accuracy farther from the boundary,
       # but still within the unit sphere
-      general_points = sampler.sample(int(0.01*num_samples), 1)
+      general_points = sampler.sample(int((1-boundary_ratio)*num_samples), 1)
       self.pts = (np.concatenate((boundary_points[0], general_points[0])),
                   np.concatenate((boundary_points[1], general_points[1])))
         

@@ -1,8 +1,5 @@
 project(Renderer LANGUAGES CXX CUDA)
 
-find_package(OpenCV REQUIRED)
-find_package(NvidiaCutlass REQUIRED)
-
 if (NOT DEFINED CMAKE_CXX_STANDARD)
     set(CMAKE_CXX_STANDARD 11)
     set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
@@ -22,8 +19,6 @@ target_include_directories(Renderer PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${UTILITY_DIR})
 
-target_link_libraries(Renderer PRIVATE
-    nvidia::cutlass::cutlass)
 
 install(TARGETS
     Renderer
@@ -43,8 +38,15 @@ if (BUILD_EXAMPLES)
         ${EIGEN3_INCLUDE_DIR}
         ${OpenCV_INCLUDE_DIR})
 
+    add_dependencies(RendererExample Renderer)
+
     install(TARGETS
         RendererExample
         LIBRARY DESTINATION ./
         RUNTIME DESTINATION ./)
+
+    install(FILES
+        example/weights.bin
+        example/biases.bin
+        DESTINATION ./)
 endif()

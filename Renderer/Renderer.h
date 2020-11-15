@@ -4,27 +4,39 @@
 #include <Eigen/Dense>
 #include "ExportSemantics.h"
 
+#include <iostream>
+
+struct Image : Eigen::Matrix<unsigned char, -1, -1, Eigen::RowMajor>
+{
+public:
+    Image(unsigned int width, unsigned int height)
+       : Eigen::Matrix<unsigned char, -1, -1, Eigen::RowMajor>(height, width*3) {}
+
+};
+
 class EXPORT SDFRenderer : public Renderer
 {
 public:
 	SDFRenderer() : Renderer() {}
 
-    SDFRenderer(unsigned int num_layers, unsigned int layer_size,
+    SDFRenderer(unsigned int H, unsigned int N,
         const Eigen::Ref<const Eigen::Matrix<float, -1, 1>>& weights,
         const Eigen::Ref<const Eigen::Matrix<float, -1, 1>>& biases) : Renderer()
     {
-        setModel(num_layers, layer_size, weights, biases);
+        setModel(H, N, weights, biases);
     }
 
     inline void
-    setModel(unsigned int num_layers, unsigned int layer_size,
+    setModel(unsigned int H, unsigned int N,
         const Eigen::Ref<const Eigen::Matrix<float, -1, 1>>& weights,
         const Eigen::Ref<const Eigen::Matrix<float, -1, 1>>& biases)
     {
-        params_.num_layers = num_layers;
-        params_.layer_size = layer_size;
-        size_t num_weights = 4 * layer_size + num_layers * num_layers * layer_size;
-        size_t num_biases = layer_size * num_layers + 1;
+        params_.H = H;
+        params_.N = N;
+        size_t num_weights = 4 * N + N * N * (H - 1);
+        size_t num_biases = N * H + 1;
+
+        //std::cout << H << ", " << N << ", " << weights.rows() << ", " << biases.rows() << std::endl;
 
         if (params_.weights) gpuDelete(params_.weights);
         if (params_.biases) gpuDelete(params_.biases);
@@ -34,13 +46,13 @@ public:
     }
 
 
-    inline Eigen::Matrix<unsigned char, -1, -1, Eigen::RowMajor>
+    inline Image
     render()
     {
-        Eigen::Matrix<unsigned char, -1, -1, Eigen::RowMajor> image(params_.height, 3*params_.width);
-        params_.image = image.data();
+        Image img(params_.width, params_.height);
+        params_.image = img.data();
         Renderer::render();
-        return image;
+        return img;
     }
 
 };

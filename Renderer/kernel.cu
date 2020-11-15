@@ -10,61 +10,77 @@
 #include <stdio.h>
 
 
+__device__ float
+leakyReLU(float val)
+{
+	return fmaxf(0, val) + 0.1 * fminf(0, val);
+}
 
-float __device__ computeSDF(const float3& pos, const
+__device__ void
+matvecmul(bool relu, int M, int K, const float* a, const float* b, const float* c, float* d)
+{
+	for (int i = 0; i < M; ++i)
+	{
+		float val = 0;
+		for (int j = 0; j < K; ++j)
+		{
+			val += a[i * K + j] * b[j];
+		}
+		val += c[i];
+		d[i] = (relu) ? leakyReLU(val) : val;
+	}
+}
+
+float __device__ computeSDF(const float3& pos, float * buffer, const
 	Renderer::Parameters& params)
 {
-	return sqrt(pos.x * pos.x + pos.y * pos.y + pos.z * pos.z) - 1;
-	/*unsigned int N = params.num_layers;
-	unsigned int H = params.layer_size;
-	float* nodes = new float[2 * N];
+	int x = blockIdx.x * blockDim.x + threadIdx.x;
+	int y = blockIdx.y * blockDim.y + threadIdx.y;
+	float3 val = make_float3(1, 0, 0);
 
-	//fill nodes with bias
-	for (unsigned int i = 0; i < N; ++i)
+	int M = params.N, K = 3;
+
+	bool relu = true;
+
+	float* weights = params.weights, * biases = params.biases;
+
+	buffer[0] = pos.x;
+	buffer[1] = pos.y;
+	buffer[2] = pos.z;
+	float* output_buffer;
+	for (int l = 0; l < params.H + 1; ++l)
 	{
-		nodes[i] = params.biases[i];
-	}
-
-	const unsigned int N2 = N * N;
-	const unsigned int Hminus = H - 1;
-
-	//Compute nodes from input layer
-	for (unsigned int i = 0; i < N; ++i)
-	{
-		nodes[i] += params.weights[3 * i] * pos.x + params.weights[3 * i + 1] * pos.y + params.weights[3 * i + 2] * pos.z;
-	}
-
-	unsigned long long weight_offset = 3 * N;
-
-	//Incredibly naive inference
-	for (unsigned int layer = 1; layer < H; ++layer)
-	{
-		unsigned int node_offset = (layer % 2) * N;
-		unsigned int prev_node_offset = ((layer - 1) % 2) * N;
-		unsigned int layer_weight_offset = (layer - 1) * N2 + weight_offset;
-		for (unsigned int node = 0; node < N; ++node)
+		float* input_buffer = buffer + (M * (l % 2));
+		output_buffer = buffer + (M * ((l + 1) % 2));
+		if (l == params.H)
 		{
-			nodes[node_offset + node] = params.biases[node_offset + node];
-			for (unsigned int prev_node = 0; prev_node < N; ++prev_node)
-			{
-				nodes[node_offset + node] += leakyReLU(nodes[prev_node_offset + prev_node], params.slope)
-					* params.weights[layer_weight_offset + prev_node];
-			}
+			M = 1;
+			relu = false;
 		}
+
+		matvecmul(relu, M, K, weights, input_buffer, biases, output_buffer);
+		/*if (x == params.width / 2 && y == params.height / 2)
+		{
+			printf("---------------- Weights %d -----------------\n", l);
+			for (int i = 0; i < M; ++i)
+			{
+				for (int j = 0; j < K; ++j)
+				{
+					printf("%f, ", weights[i * K + j]);
+				}
+				printf("\n");
+			}
+		}*/
+
+		weights += M * K;
+		biases += M;
+
+		K = M;
 	}
 
-	float output = params.biases[N * H];
-	const unsigned int prev_node_offset = (Hminus % 2) * N;
-	const unsigned int offset = Hminus * N2 + weight_offset;
-	for (unsigned int i = 0; i < N; ++i)
-	{
-		output += leakyReLU(nodes[prev_node_offset + i], params.slope) * params.weights[offset + i];
-	}
-
-	delete[] nodes;
-	output = tanhf(output);
-	printf("%f", output);
-	return output;*/
+	float output = std::tanh(output_buffer[0]);
+	//if (x == params.width/2 && y == params.height/2) printf("%f\n", output);
+	return output;
 }
 
 float3 __device__ objectColor(const float3& pos, const Renderer::Parameters& params)
@@ -82,10 +98,15 @@ float __device__ distFromOrigin(const float3& position, const float3& direction)
 
 __device__ float3 rayMarching(const float3& position, const float3& direction, const Renderer::Parameters& params)
 {
-	float3 color = make_float3(0.0f, 0.0f, 0.0f);
+	float* buffer = new float[2 * params.N];
+	float3 color = params.background_color;
 
 	//For this renderer, all points occupy the unit sphere, so nothing outside needs to be rendered.
-	if (dot(direction, -1 * position) < 0 || distFromOrigin(position, direction) > 1) return color;
+	if (dot(direction, -1 * position) < 0 || distFromOrigin(position, direction) > 1)
+	{
+		delete[] buffer;
+		return color;
+	}
 
 	float attempted_distance = 0.0f;
 	float3 pos = position;
@@ -97,15 +118,15 @@ __device__ float3 rayMarching(const float3& position, const float3& direction, c
 		pos += (remain_dist - 1) * dir;
 	}
 
-	while (attempted_distance < params.cam.maxDist())
+	while (attempted_distance < params.cam.getMaxDist())
 	{
-		float dist = computeSDF(pos, params);
+		float dist = computeSDF(pos, buffer, params);
 
 		if (dist < params.min_dist)
 		{
-			float nx = (computeSDF(make_float3(pos.x + params.eps, pos.y, pos.z), params) - computeSDF(make_float3(pos.x - params.eps, pos.y, pos.z), params));
-			float ny = (computeSDF(make_float3(pos.x, pos.y + params.eps, pos.z), params) - computeSDF(make_float3(pos.x, pos.y - params.eps, pos.z), params));
-			float nz = (computeSDF(make_float3(pos.x, pos.y, pos.z + params.eps), params) - computeSDF(make_float3(pos.x, pos.y, pos.z - params.eps), params));
+			float nx = (computeSDF(make_float3(pos.x + params.eps, pos.y, pos.z), buffer, params) - computeSDF(make_float3(pos.x - params.eps, pos.y, pos.z), buffer, params));
+			float ny = (computeSDF(make_float3(pos.x, pos.y + params.eps, pos.z), buffer, params) - computeSDF(make_float3(pos.x, pos.y - params.eps, pos.z), buffer, params));
+			float nz = (computeSDF(make_float3(pos.x, pos.y, pos.z + params.eps), buffer, params) - computeSDF(make_float3(pos.x, pos.y, pos.z - params.eps), buffer, params));
 			float3 normal = normalize(make_float3(nx, ny, nz));
 
 			//Diffuse lighting
@@ -119,10 +140,11 @@ __device__ float3 rayMarching(const float3& position, const float3& direction, c
 			float3 reflected = light_vec - 2 * light_dot_normal * normal;
 			float3 cam_vec = pos - params.cam.positionf();
 			float spec_angle = std::acosf(dot(cam_vec, reflected) / (length(reflected) * length(cam_vec)));
-			float spec_scale = pow(fmaxf(fminf(1.0f - (fabs(spec_angle - M_PI) / M_PI), 1), 0), (float)params.light.specularPower());
+			float spec_scale = pow(fmaxf(fminf(1.0f - (fabs(spec_angle - M_PI) / M_PI), 1), 0), (float)params.light.getSpecularPower());
 			spec_scale *= params.light.specularStrength();
 
-			color = objectColor(pos, params) * (diff_scale + spec_scale) + params.light.ambientStrength() * params.light.colorf();
+			color = objectColor(pos, params) *(diff_scale + spec_scale) + params.light.ambientStrength() * params.light.colorf();
+			delete[] buffer;
 			return color;
 		}
 
@@ -130,6 +152,7 @@ __device__ float3 rayMarching(const float3& position, const float3& direction, c
 		pos += dist * dir;
 	}
 
+	delete[] buffer;
 	return color;
 }
 

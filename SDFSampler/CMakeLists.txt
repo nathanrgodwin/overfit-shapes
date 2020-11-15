@@ -33,7 +33,7 @@ if (BUILD_EXAMPLES)
 
     target_link_libraries(SamplerExample PUBLIC Sampler)
 
-    install(TARGETS 
+    install(TARGETS
         SamplerExample
         LIBRARY DESTINATION ./
         RUNTIME DESTINATION ./)
@@ -47,19 +47,24 @@ if (BUILD_PYTHON)
 
     target_link_libraries(pySDFSampler PUBLIC Sampler)
 
-    set_target_properties(pySDFSampler PROPERTIES OUTPUT_NAME SDFSampler)
+    if (BUILD_RENDERER)
+        target_compile_definitions(pySDFSampler PRIVATE -DBUILD_RENDERER)
+        target_link_libraries(pySDFSampler PUBLIC Renderer)
+    endif()
+
+    set_target_properties(pySDFSampler PROPERTIES OUTPUT_NAME OverfitShapes)
 
     add_dependencies(pySDFSampler Sampler)
-    
-    install(TARGETS 
+
+    install(TARGETS
         pySDFSampler
         LIBRARY DESTINATION ./
         RUNTIME DESTINATION ./)
 
-    install(FILES 
+    install(FILES
             "${CMAKE_SOURCE_DIR}/OverfitShapes/NeuralImplicit.py"
+            "${CMAKE_SOURCE_DIR}/OverfitShapes/train.py"
             "${CMAKE_SOURCE_DIR}/OverfitShapes/FileUtilities.py"
-            "${CMAKE_SOURCE_DIR}/OverfitShapes/Overfit_Neural_Networks_as_a_Compact_Shape_Representation.ipynb"
         DESTINATION "${CMAKE_INSTALL_PREFIX}")
 
     if (BUILD_EXAMPLES)
@@ -68,7 +73,7 @@ if (BUILD_PYTHON)
     endif()
 endif()
 
-install(TARGETS 
+install(TARGETS
     Sampler
     LIBRARY DESTINATION ./
     RUNTIME DESTINATION ./)
