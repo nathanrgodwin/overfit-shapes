@@ -19,18 +19,29 @@ private:
 	float max_dist_ = 10.0f;
 	float3 up_;
 	float3 side_;
+	float3 side_internal_;
 
 public:
 
+	Camera() :
+		pos_(make_float3(1,1,1)),
+		fov_(120.0f),
+		max_dist_(10.0f)
+	{
+		dir_ = normalize(-pos_);
+		setSide({ 0, 1, 0 });
+		fov_scale_ = 1.0f / std::tan((fov_ / 180.0f * float(M_PI)) / 2.0f);
+	}
+
 	inline std::tuple<float, float, float>
-	position() const
+	getPosition() const
 	{
 		return std::make_tuple(pos_.x, pos_.y, pos_.z);
 	}
 	inline void
-	position(float x, float y, float z)
+	setPosition(std::tuple<float,float,float> pos)
 	{
-		pos_ = make_float3(x, y, z);
+		pos_ = make_float3(std::get<0>(pos), std::get<1>(pos), std::get<2>(pos));
 	}
 	inline __device__ float3
 	positionf() const
@@ -39,15 +50,15 @@ public:
 	}
 
 	inline std::tuple<float, float, float>
-	direction() const
+	getDirection() const
 	{
 		return std::make_tuple(dir_.x, dir_.y, dir_.z);
 	}
 	inline void
-	direction(float x, float y, float z)
+	setDirection(std::tuple<float,float,float> dir)
 	{
-		dir_ = make_float3(x, y, z);
-		side_ = normalize(cross(dir_, make_float3(side_.x, side_.y, side_.z)));
+		dir_ = make_float3(std::get<0>(dir), std::get<1>(dir), std::get<2>(dir));
+		side_ = normalize(cross(dir_, side_internal_));
 		up_ = normalize(cross(side_, dir_));
 	}
 	inline __device__ float3
@@ -57,7 +68,7 @@ public:
 	}
 
 	inline std::tuple<float, float, float>
-	up() const
+	getUp() const
 	{
 		return std::make_tuple(up_.x, up_.y, up_.z);
 	}
@@ -68,14 +79,15 @@ public:
 	}
 
 	inline std::tuple<float, float, float>
-	side() const
+	getSide() const
 	{
 		return std::make_tuple(side_.x, side_.y, side_.z);
 	}
 	inline void
-	side(float x, float y, float z)
+	setSide(std::tuple<float,float,float> side)
 	{
-		side_ = normalize(cross(dir_, make_float3(x, y, z)));
+		side_internal_ = make_float3(std::get<0>(side), std::get<1>(side), std::get<2>(side));
+		side_ = normalize(cross(dir_, side_internal_));
 		up_ = normalize(cross(side_, dir_));
 	}
 	inline __device__ float3
@@ -85,7 +97,7 @@ public:
 	}
 
 	inline float
-	fov() const
+	getFOV() const
 	{
 		return fov_;
 	}
@@ -95,7 +107,7 @@ public:
 		return fov_scale_;
 	}
 	inline void
-	fov(float fov)
+	setFOV(float fov)
 	{
 		assert(fov > 0);
 		fov_ = fov;
@@ -103,25 +115,15 @@ public:
 	}
 
 	__device__ inline float
-	maxDist() const
+	getMaxDist() const
 	{
 		return max_dist_;
 	}
 	inline void
-	maxDist(float max_dist)
+	setMaxDist(float max_dist)
 	{
 		assert(max_dist > 0);
 		max_dist_ = max_dist;
-	}
-
-	Camera() :
-		pos_(make_float3(2.0f, 0.0f, 0.5f)),
-		fov_(128.0f),
-		max_dist_(10.0f)
-	{
-		dir_ = normalize(-pos_);
-		side(0, 1, 0);
-		fov_scale_ = 1.0f / std::tan((fov_ / 180.0f * float(M_PI)) / 2.0f);
 	}
 
 };

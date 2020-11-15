@@ -24,6 +24,9 @@ public:
 			device_image(nullptr),
 			eps(1e-5),
 			slope(0.1),
+			H(0),
+			N(0),
+			background_color(make_float3(0,0,0)),
 			min_dist(1.8e-3) {}
 
 		Camera cam;
@@ -31,7 +34,7 @@ public:
 		unsigned char* image;
 		unsigned char* device_image;
 
-		unsigned int num_layers, layer_size;
+		unsigned int H, N;
 		float slope;
 		float* weights, * biases;
 
@@ -40,6 +43,7 @@ public:
 		unsigned int samples;
 		float eps;
 		float min_dist;
+		float3 background_color;
 	};
 
 
@@ -56,7 +60,7 @@ public:
 	}
 
 	inline void
-	resolution(unsigned int width, unsigned int height)
+	setResolution(unsigned int width, unsigned int height)
 	{
 		assert(width > 0 && height > 0);
 		params_.width = width;
@@ -65,57 +69,69 @@ public:
 		params_.device_image = makeImage(params_.width, params_.height);
 	}
 	inline std::pair<unsigned int, unsigned int>
-	resolution() const
+	getResolution() const
 	{
 		return std::make_pair(params_.width, params_.height);
 	}
 
 	inline float
-	minDist() const
+	getMinDist() const
 	{
 		return params_.min_dist;
 	}
 	inline void
-	minDist(float min_dist)
+	setMinDist(float min_dist)
 	{
 		params_.min_dist = min_dist;
 	}
 
 	inline float
-	eps() const
+	getEps() const
 	{
 		return params_.eps;
 	}
 	inline void
-	eps(float eps)
+	setEps(float eps)
 	{
 		assert(eps > 0);
 		params_.eps = eps;
 	}
 
 	inline const Light&
-	light() const
+	getLight() const
 	{
 		return params_.light;
 	}
 	inline void
-	light(const Light& light)
+	setLight(const Light& light)
 	{
 		params_.light = light;
 	}
 
 	inline const Camera&
-	camera() const
+	getCamera() const
 	{
 		return params_.cam;
 	}
 	inline void
-	camera(const Camera& cam)
+	setCamera(const Camera& cam)
 	{
 		params_.cam = cam;
 	}
 
+	inline std::tuple<float,float,float>
+	getBackgroundColor()
+	{
+		return std::make_tuple(params_.background_color.x,
+			params_.background_color.y,
+			params_.background_color.z);
+	}
 
+	inline void
+	setBackgroundColor(float r, float g, float b)
+	{
+		params_.background_color = make_float3(r, g, b);
+	}
 protected:
 
 
