@@ -13,8 +13,11 @@ C++/PyTorch Implementation of the Paper: "Overfit Neural Networks as a Compact S
       primaryClass={cs.GR}
 }
 ```
-Render of encoded cube
-![Cube Render](/assets/cube.gif)
+<p align="center">
+Render of network trained on cube
+<br>
+<img width="320" height="240" src="/assets/cube.gif" />
+</p>
 
 ## Dependencies
 ### Sampler
