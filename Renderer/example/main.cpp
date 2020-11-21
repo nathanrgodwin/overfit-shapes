@@ -46,12 +46,19 @@ int main()
         return 1;
     }
 
-	SDFRenderer renderer;
-	renderer.setModel(H, N, weight_mat, bias_mat);
-	auto img = renderer.render();
-	cv::Mat image(img.rows(), img.cols()/3, CV_8UC3, img.data());
-	cv::imshow("Render", image);
-	cv::waitKey();
+    try
+    {
+        SDFRenderer renderer;
+        renderer.setModel(H, N, weight_mat, bias_mat);
+        auto img = renderer.render();
+        cv::Mat image(img.rows(), img.cols() / 3, CV_8UC3, img.data());
+        cv::imshow("Render", image);
+        cv::waitKey();
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+    }
 
 
 	return 0;

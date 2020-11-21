@@ -8,9 +8,20 @@
 
 #include <cmath>
 #include <stdio.h>
+#include <stdexcept>
+#include <sstream>
 
-#define TARGET_SHARED_MEM (32*1024)
-
+#define cudaCheck(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort = true)
+{
+	if (code != cudaSuccess)
+	{
+		fprintf(stderr, "CUDA ERROR: %s %s %d\n", cudaGetErrorString(code), file, line);
+		std::stringstream ss;
+		ss << "CUDA ERROR: " << cudaGetErrorString(code) << " " << file << " " << line << "\n";
+		if (abort) throw std::runtime_error(ss.str());
+	}
+}
 
 __device__ float
 leakyReLU(float val)
@@ -195,21 +206,21 @@ unsigned char*
 Renderer::makeImage(unsigned int width, unsigned int height)
 {
 	unsigned char* deviceImage;
-	cudaMalloc(&deviceImage, 3 * width * height);
+	cudaCheck(cudaMalloc(&deviceImage, 3 * width * height));
 	return deviceImage;
 }
 
 void
 Renderer::gpuDelete(unsigned char* image)
 {
-	cudaFree(image);
+	cudaCheck(cudaFree(image));
 }
 
 
 void
 Renderer::gpuDelete(float* data)
 {
-	cudaFree(data);
+	cudaCheck(cudaFree(data));
 }
 
 void
@@ -218,12 +229,13 @@ Renderer::render()
 	dim3 block_size((params_.N <= 64) ? 8 : 4, 8);
 	dim3 grid_size(params_.width / block_size.x + 1, params_.height / block_size.y + 1);
 	renderImage<<<grid_size, block_size, 2 * block_size.x * block_size.y * params_.N * sizeof(float)>>>(params_);
-	cudaMemcpy(params_.image, params_.device_image, 3 * params_.width * params_.height, cudaMemcpyDeviceToHost);
+	cudaCheck(cudaPeekAtLastError());
+	cudaCheck(cudaMemcpy(params_.image, params_.device_image, 3 * params_.width * params_.height, cudaMemcpyDeviceToHost));
 }
 
 void
 Renderer::copyDataToGPU(float** dst, const float* src, size_t numel)
 {
-	cudaMalloc(dst, sizeof(float) * numel);
-	cudaMemcpy(*dst, src, sizeof(float) * numel, cudaMemcpyHostToDevice);
+	cudaCheck(cudaMalloc(dst, sizeof(float) * numel));
+	cudaCheck(cudaMemcpy(*dst, src, sizeof(float) * numel, cudaMemcpyHostToDevice));
 }
