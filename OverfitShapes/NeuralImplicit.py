@@ -7,7 +7,7 @@ import torch
 import torch.optim as optim
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
-from OverfitShapes import PointSampler, MeshLoader, normalizeMeshToUnitSphere
+from OverfitShapes import PointSampler, MeshLoader, normalizeMeshToSphere
 
 class NeuralImplicit:
   def __init__(self, H = 8, N = 32):
@@ -18,9 +18,8 @@ class NeuralImplicit:
     self.lr = 1e-4
     self.batch_size = 64
     self.log_iterations = 1000
-    self.boundary_ratio = 0.95
+    self.boundary_ratio = 0.99
     self.trained = False
-    self.adaptive_lr = False
 
   # Supported mesh file formats are .obj and .stl
   # Sampler selects oversample_ratio * num_sample points around the mesh, keeping only num_sample most
@@ -40,10 +39,6 @@ class NeuralImplicit:
 
     loss_func = nn.L1Loss(reduction='mean')
     optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
-    scheduler = None
-    if (self.adaptive_lr):
-      scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', 
-                    patience=min(self.epochs/20, 10), verbose=verbose)
 
 
     for e in range(self.epochs):
@@ -72,9 +67,6 @@ class NeuralImplicit:
               len(dataset),
               epoch_loss / (batch_idx + 1))
           logging.info(msg)
-
-      if (scheduler is not None):
-        scheduler.step(epoch_loss)
 
       if (early_stop and epoch_loss < early_stop):
         break
@@ -109,6 +101,7 @@ class NeuralImplicit:
     return biases
 
   def renderable(self):
+    assert(self.trained)
     return (self.H, self.N, self.weights(), self.biases())
 
   # The actual network here is just a simple MLP
@@ -142,7 +135,7 @@ class NeuralImplicit:
         logging.info("Loading " + mesh_file)
 
       vertices, faces = MeshLoader.read(mesh_file)
-      normalizeMeshToUnitSphere(vertices, faces)
+      normalizeMeshToSphere(vertices, faces)
 
       if (verbose):
         logging.info("Loaded " + mesh_file)

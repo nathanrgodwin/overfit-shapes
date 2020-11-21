@@ -34,7 +34,9 @@ PYBIND11_MODULE(OverfitShapes, m) {
         .def_readwrite("beta", &PointSampler::beta_)
         .def_readwrite("seed", &PointSampler::seed_);
 
-    m.def("normalizeMeshToUnitSphere", &normalizeMeshToUnitSphere, "Normalizes a mesh to the unit sphere at origin");
+    m.def("normalizeMeshToSphere", &normalizeMeshToSphere,
+        py::arg("vertices"), py::arg("faces"), py::arg("radius") = 1,
+        "Normalizes a mesh to the unit sphere at origin");
 
 #ifdef BUILD_RENDERER
     py::class_<Light>(m, "Light")

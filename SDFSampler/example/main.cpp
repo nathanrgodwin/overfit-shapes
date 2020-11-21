@@ -11,7 +11,7 @@ main(int argc, char** argv)
     Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor> faces;
     std::tie(vertices, faces) = MeshLoader::read("cube.obj");
     std::cout << vertices.rows() << ", " << faces.rows() << std::endl;
-    normalizeMeshToUnitSphere(vertices, faces);
+    normalizeMeshToSphere(vertices, faces, 0.9);
     SDFSampler::PointSampler sampler(vertices, faces);
     std::cout << sampler.sample(10, 20).first << std::endl;
 }

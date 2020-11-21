@@ -12,11 +12,11 @@ def train(filename):
 
 #mesh_folder = "./" #PATH TO FOLDER CONTAINING MESH FILES
 #parallelForEachFile(mesh_folder, train, [".obj",".stl"], 4)
+
 cube = NeuralImplicit()
-cube.lr = 1e-3
-cube.adaptive_lr = True
-cube.encode("cube.obj", num_samples=1100000, oversample_ratio=20)
+cube.encode("cube.obj")
 cube.model.to(torch.device("cpu"))
+
 renderer = Renderer(*cube.renderable())
 def rotate_vec(vec, angle):
     rad = math.radians(angle)

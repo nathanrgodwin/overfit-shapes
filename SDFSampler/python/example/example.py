@@ -1,11 +1,11 @@
-from OverfitShapes import PointSampler, MeshLoader, normalizeMeshToUnitSphere
+from OverfitShapes import PointSampler, MeshLoader, normalizeMeshToSphere
 import numpy as np
 import mpl_toolkits.mplot3d as Axes3D
 import matplotlib.pyplot as plt
 
 def main(plot_mesh = False):
     vertices, faces = MeshLoader.read("cube.obj")
-    normalizeMeshToUnitSphere(vertices, faces)
+    normalizeMeshToSphere(vertices, faces, 0.9)
 
     sampler = PointSampler(vertices, faces)
     boundary_points = sampler.sample(int(0.99*1e3), 10)

@@ -34,8 +34,8 @@ matvecmul(bool relu, int M, int K, const float* a, const float* b, const float* 
 float __device__ computeSDF(const float3& pos, float * buffer, const
 	Renderer::Parameters& params)
 {
-	int x = blockIdx.x * blockDim.x + threadIdx.x;
-	int y = blockIdx.y * blockDim.y + threadIdx.y;
+	/*int x = blockIdx.x * blockDim.x + threadIdx.x;
+	int y = blockIdx.y * blockDim.y + threadIdx.y;*/
 	float3 val = make_float3(1, 0, 0);
 
 	int M = params.N, K = 3;
@@ -96,30 +96,63 @@ float __device__ distFromOrigin(const float3& position, const float3& direction)
 	return length(p);
 }
 
+float __device__ distToSphere(const float3& position, const float3& direction)
+{
+	float a = dot(direction, direction);
+	float b = 2.0 * dot(position, direction);
+	float c = dot(position, position) - 1;
+	float discriminant = b * b - 4 * a * c;
+	if (discriminant < 0.0)
+	{
+		return -1;
+	}
+	else
+	{
+		float numerator = -b - sqrt(discriminant);
+		if (numerator > 0)
+		{
+			return numerator / (2.0 * a);
+		}
+
+		numerator = -b + sqrt(discriminant);
+		if (numerator > 0)
+		{
+			return numerator / (2.0 * a);
+		}
+		else
+		{
+			return -1;
+		}
+	}
+}
+
+#define EPS 0.000001
+
 __device__ float3 rayMarching(const float3& position, const float3& direction, const Renderer::Parameters& params)
 {
-	float* buffer = new float[2 * params.N];
+	extern __shared__ float shared_mem[];
+	size_t offset = 2 * params.N * (threadIdx.x + threadIdx.y * blockDim.x);
+	float* buffer = shared_mem + offset;
 	float3 color = params.background_color;
 
-	//For this renderer, all points occupy the unit sphere, so nothing outside needs to be rendered.
-	if (dot(direction, -1 * position) < 0 || distFromOrigin(position, direction) > 1)
-	{
-		delete[] buffer;
-		return color;
-	}
-
-	float attempted_distance = 0.0f;
 	float3 pos = position;
 	float3 dir = normalize(direction);
+	float intersect_dist = distToSphere(pos, dir);
 
-	float remain_dist;
-	if ((remain_dist = length(pos)) > 1)
+	//For this renderer, all points occupy the unit sphere, so nothing outside needs to be rendered.
+	if (intersect_dist < 0)
 	{
-		pos += (remain_dist - 1) * dir;
+		return color;
+	}
+	else
+	{
+		pos += (intersect_dist + EPS) * dir;
 	}
 
-	while (attempted_distance < params.cam.getMaxDist())
+	float pos_len = length(pos);
+	while (pos_len < 1)
 	{
+
 		float dist = computeSDF(pos, buffer, params);
 
 		if (dist < params.min_dist)
@@ -144,15 +177,13 @@ __device__ float3 rayMarching(const float3& position, const float3& direction, c
 			spec_scale *= params.light.specularStrength();
 
 			color = objectColor(pos, params) *(diff_scale + spec_scale) + params.light.ambientStrength() * params.light.colorf();
-			delete[] buffer;
 			return color;
 		}
 
-		attempted_distance += dist;
 		pos += dist * dir;
+		pos_len = length(pos);
 	}
 
-	delete[] buffer;
 	return color;
 }
 
@@ -198,9 +229,9 @@ void
 Renderer::render()
 {
 	assert(params_.weight != nullptr && params_.biases != nullptr);
-	dim3 threads(8, 8);
-	dim3 blocks(params_.width / threads.x + 1, params_.height / threads.y + 1);
-	renderImage<<<blocks, threads>>>(params_);
+	dim3 block_size(8, 8);
+	dim3 grid_size(params_.width / block_size.x + 1, params_.height / block_size.y + 1);
+	renderImage<<<grid_size, block_size, 2 * block_size.x * block_size.y * params_.N * sizeof(float)>>>(params_);
 	cudaMemcpy(params_.image, params_.device_image, 3 * params_.width * params_.height, cudaMemcpyDeviceToHost);
 }
 
