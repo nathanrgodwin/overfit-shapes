@@ -9,6 +9,8 @@
 #include <cmath>
 #include <stdio.h>
 
+#define TARGET_SHARED_MEM (32*1024)
+
 
 __device__ float
 leakyReLU(float val)
@@ -34,8 +36,6 @@ matvecmul(bool relu, int M, int K, const float* a, const float* b, const float* 
 float __device__ computeSDF(const float3& pos, float * buffer, const
 	Renderer::Parameters& params)
 {
-	/*int x = blockIdx.x * blockDim.x + threadIdx.x;
-	int y = blockIdx.y * blockDim.y + threadIdx.y;*/
 	float3 val = make_float3(1, 0, 0);
 
 	int M = params.N, K = 3;
@@ -47,7 +47,7 @@ float __device__ computeSDF(const float3& pos, float * buffer, const
 	buffer[0] = pos.x;
 	buffer[1] = pos.y;
 	buffer[2] = pos.z;
-	float* output_buffer;
+	float* output_buffer = buffer;
 	for (int l = 0; l < params.H + 1; ++l)
 	{
 		float* input_buffer = buffer + (M * (l % 2));
@@ -59,18 +59,6 @@ float __device__ computeSDF(const float3& pos, float * buffer, const
 		}
 
 		matvecmul(relu, M, K, weights, input_buffer, biases, output_buffer);
-		/*if (x == params.width / 2 && y == params.height / 2)
-		{
-			printf("---------------- Weights %d -----------------\n", l);
-			for (int i = 0; i < M; ++i)
-			{
-				for (int j = 0; j < K; ++j)
-				{
-					printf("%f, ", weights[i * K + j]);
-				}
-				printf("\n");
-			}
-		}*/
 
 		weights += M * K;
 		biases += M;
@@ -79,7 +67,6 @@ float __device__ computeSDF(const float3& pos, float * buffer, const
 	}
 
 	float output = std::tanh(output_buffer[0]);
-	//if (x == params.width/2 && y == params.height/2) printf("%f\n", output);
 	return output;
 }
 
@@ -228,8 +215,7 @@ Renderer::gpuDelete(float* data)
 void
 Renderer::render()
 {
-	assert(params_.weight != nullptr && params_.biases != nullptr);
-	dim3 block_size(8, 8);
+	dim3 block_size((params_.N <= 64) ? 8 : 4, 8);
 	dim3 grid_size(params_.width / block_size.x + 1, params_.height / block_size.y + 1);
 	renderImage<<<grid_size, block_size, 2 * block_size.x * block_size.y * params_.N * sizeof(float)>>>(params_);
 	cudaMemcpy(params_.image, params_.device_image, 3 * params_.width * params_.height, cudaMemcpyDeviceToHost);
