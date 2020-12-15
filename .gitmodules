@@ -1,5 +1,5 @@
-[submodule ".\\3rdparty\\WindingNumber\\"]
-	path = .\\3rdparty\\WindingNumber\\
+[submodule "3rdparty/WindingNumber"]
+	path = 3rdparty/WindingNumber
 	url = https://github.com/alecjacobson/WindingNumber.git
 [submodule "3rdparty/pybind11"]
 	path = 3rdparty/pybind11
